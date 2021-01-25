@@ -12,7 +12,6 @@ ui <- fluidPage(
     titlePanel("Secret Hitler Card Draw"),
 
     mainPanel(
-        textOutput("count"),
         setSliderColor(c("dodgerblue","firebrick"), c(1,2)),
         sliderTextInput(
             inputId = "nLiberal",
@@ -32,11 +31,21 @@ ui <- fluidPage(
             style = "material-flat",
             color = "success"
         ),
+        actionBttn(
+            inputId = "hideCards",
+            label = "Hide all",
+            style = "material-flat",
+            color = "royal"
+        ),
+        br(),
+        br(),
+        textOutput("count"),
         hr(),
-        fluidRow(column(2,imageOutput("card1")),
-                 column(2,imageOutput("card2")),
-                 column(2,imageOutput("card3"))
-                 ),
+        fluidRow(
+            column(2, HTML("<div style='height: 140px;'>"), imageOutput("card1"), HTML("</div>")),
+            column(2, HTML("<div style='height: 140px;'>"), imageOutput("card2"), HTML("</div>")),
+            column(2, HTML("<div style='height: 140px;'>"), imageOutput("card3"), HTML("</div>")),
+        ),
         uiOutput("cards"),
         ),
     
@@ -64,33 +73,38 @@ ui <- fluidPage(
 
 # Define server logic
 server <- function(input, output){
+    
+    #set reactive values (these can be changed )
     drawValues = reactiveValues()
     draw = eventReactive(input$drawCards, {
         random_draw = rbinom(n=3, size=1, prob=11/17)
         cards = ifelse(random_draw==1, "facist.png", "liberal.png")
-        drawValues$value = cards
+        drawValues[['cardValues']] = cards
         drawValues[['hiddenState']] = c(0,0,0)
         
         startAnim(session = getDefaultReactiveDomain(), "card1","bounce")
         startAnim(session = getDefaultReactiveDomain(), "card2","bounce")
         startAnim(session = getDefaultReactiveDomain(), "card3","bounce")
         
-        
         return(cards)
     })
     
+    observeEvent(input$hideCards, {
+        drawValues[['hiddenState']] = c(1,1,1)
+    })
+    
     onclick("card1", {
-        drawValues$value[1] = "hidden.png"
+        drawValues[['cardValues']][1] = "hidden.png"
         drawValues[['hiddenState']][1] = 1 - drawValues[['hiddenState']][1] 
     })
     
     onclick("card2", {
-        drawValues$value[2] = "hidden.png"
+        drawValues[['cardValues']][2] = "hidden.png"
         drawValues[['hiddenState']][2] = 1 - drawValues[['hiddenState']][2] 
     })
     
     onclick("card3", {
-        drawValues$value[3] = "hidden.png"
+        drawValues[['cardValues']][3] = "hidden.png"
         drawValues[['hiddenState']][3] = 1 - drawValues[['hiddenState']][3] 
     })
     
@@ -104,8 +118,8 @@ server <- function(input, output){
     })
     
     output$card1 = renderImage({
-        images = draw()
-        image = images[1]
+        cards = draw()
+        image = cards[1]
         if(drawValues[['hiddenState']][1]==1){
             image = 'hidden.png'
         }
@@ -117,8 +131,8 @@ server <- function(input, output){
     }, deleteFile = FALSE)
     
     output$card2 = renderImage({
-        images = draw()
-        image = images[2]
+        cards = draw()
+        image = cards[2]
         if(drawValues[['hiddenState']][2]==1){
             image = 'hidden.png'
         }
@@ -129,8 +143,8 @@ server <- function(input, output){
     }, deleteFile = FALSE)
     
     output$card3 = renderImage({
-        images = draw()
-        image = images[3]
+        cards = draw()
+        image = cards[3]
         if(drawValues[['hiddenState']][3]==1){
             image = 'hidden.png'
         }
@@ -140,7 +154,6 @@ server <- function(input, output){
              height = 135)
     }, deleteFile = FALSE)
 
-    
     ## keep alive ##
     output$keepAlive <- renderText({
         req(input$count)
